@@ -1,4 +1,4 @@
-import os, io, json, uuid, datetime, pathlib
+import os, io, json, uuid, datetime, pathlib, logging
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,7 +143,9 @@ async def identify(file:UploadFile=File(...)):
    r.raise_for_status();result=r.json()
   if not isinstance(result,list):raise ValueError('Unexpected AI response')
   return {'available':True,'predictions':result[:5],'warning':'Image labels are predictions, not verified breed, health, or age. Exact age cannot be reliably inferred from a photo.'}
- except Exception:return {'available':False,'message':'AI service unavailable right now. Try again later.'}
+ except Exception as e:
+    logging.exception("Hugging Face AI identification failed")
+    return {'available':False,'message':'AI service unavailable right now. Try again later.'}
 def admin(u):return u.email.lower() in [x.strip().lower() for x in os.getenv('ADMIN_EMAILS','').split(',') if x.strip()]
 @app.get('/api/admin/pending')
 def pending(u:User=Depends(current),s:Session=Depends(db)):
