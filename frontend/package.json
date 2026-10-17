@@ -1,0 +1,19 @@
+{
+  "name": "pawconnect-ai",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "vite": "^6.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": "^0.468.0",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow-models/mobilenet": "^2.1.1"
+  },
+  "devDependencies": {}
+}
