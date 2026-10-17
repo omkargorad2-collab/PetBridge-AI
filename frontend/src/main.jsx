@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { PawPrint, Heart, Camera, Search, MapPin, ShieldCheck, LogOut, Plus, Menu, ArrowRight, Upload, Dog, AlertCircle } from 'lucide-react';
 import './style.css';
 
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+const API = 'https://petbridge-ai-backend.onrender.com';
 async function request(path, opts = {}) {
   const token = localStorage.getItem('pawtoken');
   const res = await fetch(API + path, {
