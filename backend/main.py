@@ -13,9 +13,21 @@ import jwt
 import httpx
 from dotenv import load_dotenv
 
+import cloudinary
+import cloudinary.uploader
+
+
 ROOT = pathlib.Path(__file__).resolve().parent
 load_dotenv(ROOT / '.env')
 UPLOAD = ROOT / 'uploads'; UPLOAD.mkdir(exist_ok=True)
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
+
 DB = os.getenv('DATABASE_URL', f'sqlite:///{ROOT / "pawconnect.db"}')
 if DB.startswith('postgres://'): DB = 'postgresql://' + DB[len('postgres://'):]
 engine = create_engine(DB, connect_args={'check_same_thread': False} if DB.startswith('sqlite') else {}, pool_pre_ping=True)
@@ -285,16 +297,41 @@ def report(data: LostInput, u: User = Depends(current), s: Session = Depends(db)
     p = Lost(**data.model_dump(), user_id=u.id)
     s.add(p); s.commit(); s.refresh(p); return public_lost(p)
 
+
 @app.post('/api/upload')
 async def upload(file: UploadFile = File(...), u: User = Depends(current)):
     data = await file.read()
-    if len(data) > 5 * 1024 * 1024: raise HTTPException(413, 'Max 5 MB')
+
+    if len(data) > 5 * 1024 * 1024:
+        raise HTTPException(413, 'Max 5 MB')
+
     try:
-        im = Image.open(io.BytesIO(data)); im.verify()
-        im = Image.open(io.BytesIO(data)).convert('RGB'); im.thumbnail((1400, 1400))
-    except Exception: raise HTTPException(400, 'Invalid image')
-    filename = f'{uuid.uuid4().hex}.jpg'; im.save(UPLOAD / filename, format='JPEG', quality=85)
-    return {'url': f'/uploads/{filename}'}
+        im = Image.open(io.BytesIO(data))
+        im.verify()
+
+        im = Image.open(io.BytesIO(data)).convert('RGB')
+        im.thumbnail((1400, 1400))
+
+        output = io.BytesIO()
+        im.save(output, format='JPEG', quality=85)
+        output.seek(0)
+
+    except Exception:
+        raise HTTPException(400, 'Invalid image')
+
+    try:
+        result = cloudinary.uploader.upload(
+            output,
+            folder="pawconnect/pets",
+            resource_type="image"
+        )
+
+        return {"url": result["secure_url"]}
+
+    except Exception:
+        logging.exception("Cloudinary upload failed")
+        raise HTTPException(502, "Image upload failed. Please try again.")
+
 
 @app.post('/api/identify')
 async def identify(file: UploadFile = File(...), u: User = Depends(current)):
